@@ -1,0 +1,104 @@
+From 0287652373bd983c822a214ed9be32af90ee64cd Mon Sep 17 00:00:00 2001
+From: boogie <boogiepop@gmx.com>
+Date: Sun, 23 Mar 2025 17:19:55 +0100
+Subject: [PATCH] add rkmpp hw device
+
+---
+ video/drmprime.c                 |  5 +++++
+ video/hwdec.c                    |  1 +
+ video/hwdec.h                    |  1 +
+ video/out/gpu/hwdec.c            |  2 ++
+ video/out/hwdec/hwdec_drmprime.c | 19 ++++++++++++++++++-
+ 5 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/video/drmprime.c b/video/drmprime.c
+index 64d793fcd69d9..fff297356ab92 100644
+--- a/video/drmprime.c
++++ b/video/drmprime.c
+@@ -41,3 +41,8 @@ const struct hwcontext_fns hwcontext_fns_drmprime = {
+     .av_hwdevice_type = AV_HWDEVICE_TYPE_DRM,
+     .create_dev = drm_create_standalone,
+ };
++
++const struct hwcontext_fns hwcontext_fns_rkmpp = {
++    .av_hwdevice_type = AV_HWDEVICE_TYPE_RKMPP,
++    .create_dev = drm_create_standalone,
++};
+diff --git a/video/hwdec.c b/video/hwdec.c
+index deba518e82c25..a1371a6f3162b 100644
+--- a/video/hwdec.c
++++ b/video/hwdec.c
+@@ -124,6 +124,7 @@ static const struct hwcontext_fns *const hwcontext_fns[] = {
+ #endif
+ #if HAVE_DRM
+     &hwcontext_fns_drmprime,
++    &hwcontext_fns_rkmpp,
+ #endif
+ #if HAVE_VAAPI
+     &hwcontext_fns_vaapi,
+diff --git a/video/hwdec.h b/video/hwdec.h
+index c83d20783d9a6..0fd9c05da14f7 100644
+--- a/video/hwdec.h
++++ b/video/hwdec.h
+@@ -120,6 +120,7 @@ const struct hwcontext_fns *hwdec_get_hwcontext_fns(int av_hwdevice_type);
+ extern const struct hwcontext_fns hwcontext_fns_cuda;
+ extern const struct hwcontext_fns hwcontext_fns_d3d11;
+ extern const struct hwcontext_fns hwcontext_fns_drmprime;
++extern const struct hwcontext_fns hwcontext_fns_rkmpp;
+ extern const struct hwcontext_fns hwcontext_fns_dxva2;
+ extern const struct hwcontext_fns hwcontext_fns_vaapi;
+ extern const struct hwcontext_fns hwcontext_fns_vdpau;
+diff --git a/video/out/gpu/hwdec.c b/video/out/gpu/hwdec.c
+index cb68c54be08a7..936920b19c156 100644
+--- a/video/out/gpu/hwdec.c
++++ b/video/out/gpu/hwdec.c
+@@ -36,6 +36,7 @@ extern const struct ra_hwdec_driver ra_hwdec_dxva2dxgi;
+ extern const struct ra_hwdec_driver ra_hwdec_cuda;
+ extern const struct ra_hwdec_driver ra_hwdec_drmprime;
+ extern const struct ra_hwdec_driver ra_hwdec_drmprime_overlay;
++extern const struct ra_hwdec_driver ra_hwdec_drmprime_rkmpp;
+ extern const struct ra_hwdec_driver ra_hwdec_aimagereader;
+ extern const struct ra_hwdec_driver ra_hwdec_vulkan;
+ 
+@@ -72,6 +73,7 @@ const struct ra_hwdec_driver *const ra_hwdec_drivers[] = {
+ #if HAVE_DRM
+     &ra_hwdec_drmprime,
+     &ra_hwdec_drmprime_overlay,
++    &ra_hwdec_drmprime_rkmpp,
+ #endif
+ #if HAVE_ANDROID_MEDIA_NDK
+     &ra_hwdec_aimagereader,
+diff --git a/video/out/hwdec/hwdec_drmprime.c b/video/out/hwdec/hwdec_drmprime.c
+index 7869eb124a4f0..86436a3ba3dae 100644
+--- a/video/out/hwdec/hwdec_drmprime.c
++++ b/video/out/hwdec/hwdec_drmprime.c
+@@ -115,7 +115,7 @@ static int init(struct ra_hwdec *hw)
+     MP_VERBOSE(hw, "Using DRM device: %s\n", device_path);
+ 
+     int ret = av_hwdevice_ctx_create(&p->hwctx.av_device_ref,
+-                                     AV_HWDEVICE_TYPE_DRM,
++                                     hw->driver->device_type,
+                                      device_path, NULL, 0);
+     talloc_free(tmp);
+     if (ret != 0) {
+@@ -318,3 +318,20 @@ const struct ra_hwdec_driver ra_hwdec_drmprime = {
+         .unmap = mapper_unmap,
+     },
+ };
++
++
++const struct ra_hwdec_driver ra_hwdec_drmprime_rkmpp = {
++    .name = "drmprime_rkmpp",
++    .priv_size = sizeof(struct priv_owner),
++    .imgfmts = {IMGFMT_DRMPRIME, 0},
++    .device_type = AV_HWDEVICE_TYPE_RKMPP,
++    .init = init,
++    .uninit = uninit,
++    .mapper = &(const struct ra_hwdec_mapper_driver){
++        .priv_size = sizeof(struct dmabuf_interop_priv),
++        .init = mapper_init,
++        .uninit = mapper_uninit,
++        .map = mapper_map,
++        .unmap = mapper_unmap,
++    },
++};

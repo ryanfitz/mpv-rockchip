@@ -1,0 +1,40 @@
+From 460d6cc619f5f5ff52882da353ad2a72b530a006 Mon Sep 17 00:00:00 2001
+From: boogie <boogiepop@gmx.com>
+Date: Tue, 25 Mar 2025 20:35:10 +0100
+Subject: [PATCH] rkmpp drm prime overlay hwdec
+
+---
+ video/out/gpu/hwdec.c                    |  1 +
+ video/out/hwdec/hwdec_drmprime_overlay.c | 10 ++++++++++
+ 2 files changed, 11 insertions(+)
+
+diff --git a/video/out/gpu/hwdec.c b/video/out/gpu/hwdec.c
+index 936920b19c156..5f96c1726682e 100644
+--- a/video/out/gpu/hwdec.c
++++ b/video/out/gpu/hwdec.c
+@@ -37,6 +37,7 @@ extern const struct ra_hwdec_driver ra_hwdec_cuda;
+ extern const struct ra_hwdec_driver ra_hwdec_drmprime;
+ extern const struct ra_hwdec_driver ra_hwdec_drmprime_overlay;
+ extern const struct ra_hwdec_driver ra_hwdec_drmprime_rkmpp;
++extern const struct ra_hwdec_driver ra_hwdec_drmprime_rkmpp_overlay;
+ extern const struct ra_hwdec_driver ra_hwdec_aimagereader;
+ extern const struct ra_hwdec_driver ra_hwdec_vulkan;
+ 
+diff --git a/video/out/hwdec/hwdec_drmprime_overlay.c b/video/out/hwdec/hwdec_drmprime_overlay.c
+index 61514f8e893d3..286f0372f7a2c 100644
+--- a/video/out/hwdec/hwdec_drmprime_overlay.c
++++ b/video/out/hwdec/hwdec_drmprime_overlay.c
+@@ -333,3 +333,13 @@ const struct ra_hwdec_driver ra_hwdec_drmprime_overlay = {
+     .overlay_frame = overlay_frame,
+     .uninit = uninit,
+ };
++
++const struct ra_hwdec_driver ra_hwdec_drmprime_rkmpp_overlay = {
++    .name = "drmprime-overlay",
++    .priv_size = sizeof(struct priv),
++    .imgfmts = {IMGFMT_DRMPRIME, 0},
++    .device_type = AV_HWDEVICE_TYPE_RKMPP,
++    .init = init,
++    .overlay_frame = overlay_frame,
++    .uninit = uninit,
++};
